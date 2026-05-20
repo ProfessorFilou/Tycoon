@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TYCOON KRIEG</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&family=Share+Tech+Mono&display=swap');
+
+:root {
+  --bg: #07080d;
+  --panel: #0d0f18;
+  --panel2: #111420;
+  --border: #1e2235;
+  --border2: #2a2d45;
+  --gold: #f0c040;
+  --gold2: #ffd700;
+  --red: #ff3355;
+  --green: #00e676;
+  --blue: #2979ff;
+  --cyan: #00e5ff;
+  --orange: #ff6d00;
+  --purple: #ce93d8;
+  --text: #dde3f5;
+  --dim: #555878;
+  --dim2: #7b80a0;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Exo 2', sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── LOBBY OVERLAY ── */
+#overlay {
+  position: fixed; inset: 0;
+  background: radial-gradient(ellipse at 50% 40%, #0d1030 0%, #07080d 70%);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200;
+  overflow: hidden;
+}
+#overlay::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,.012) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,.012) 40px);
+  pointer-events: none;
+}
+
+#lobby-wrap {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  width: 820px;
+  max-width: 98vw;
+  position: relative;
+  z-index: 1;
+}
+
+#modal {
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  box-shadow: 0 0 80px rgba(240,192,64,.12), 0 0 0 1px rgba(240,192,64,.04);
+  padding: 32px 36px;
+  width: 360px;
+  flex-shrink: 0;
+  position: relative;
+}
+#modal::before {
+  content: '';
+  position: absolute; top: -1px; left: 40px; right: 40px; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.m-logo {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 26px; font-weight: 900;
+  color: var(--gold); text-align: center;
+  letter-spacing: 4px; margin-bottom: 3px;
+  text-shadow: 0 0 40px rgba(240,192,64,.5);
+}
+.m-sub {
+  text-align: center; color: var(--dim2); font-size: 9px;
+  font-family: 'Share Tech Mono', monospace; letter-spacing: 2px;
+  margin-bottom: 22px;
+}
+.m-label { font-size: 10px; letter-spacing: 2px; color: var(--dim2); margin-bottom: 5px; display: block; font-family: 'Share Tech Mono', monospace; }
+.m-input {
+  width: 100%; background: var(--panel2); border: 1px solid var(--border2);
+  color: var(--text); padding: 10px 12px; font-family: 'Exo 2', sans-serif;
+  font-size: 14px; outline: none; margin-bottom: 12px; border-radius: 2px;
+  transition: border-color .2s;
+}
+.m-input:focus { border-color: var(--gold); }
+.m-btn {
+  width: 100%; padding: 12px; background: var(--gold); color: #000;
+  border: none; font-family: 'Orbitron', sans-serif; font-size: 15px;
+  font-weight: 900; letter-spacing: 2px; cursor: pointer; border-radius: 2px;
+  transition: all .15s;
+}
+.m-btn:hover { background: var(--gold2); box-shadow: 0 0 24px rgba(240,192,64,.4); }
+.m-btn:disabled { opacity: .4; cursor: not-allowed; }
+#m-status {
+  margin-top: 12px; font-family: 'Share Tech Mono', monospace; font-size: 10px;
+  color: var(--dim2); text-align: center; min-height: 16px;
+}
+#m-status.ok { color: var(--green); }
+#m-status.err { color: var(--red); }
+
+/* LOBBY PLAYERS PANEL */
+#lobby-players {
+  flex: 1;
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  box-shadow: 0 0 40px rgba(0,0,0,.5);
+}
+#lp-header {
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+#lp-title {
+  font-family: 'Orbitron', sans-serif; font-size: 11px;
+  letter-spacing: 3px; color: var(--gold);
+}
+#lp-count {
+  font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--dim2);
+}
+#lobby-players-list {
+  padding: 8px;
+  display: flex; flex-direction: column; gap: 4px;
+  min-height: 200px; max-height: 400px; overflow-y: auto;
+}
+#lobby-players-list::-webkit-scrollbar { width: 3px; }
+#lobby-players-list::-webkit-scrollbar-thumb { background: var(--border2); }
+.lp-row {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--panel2); border: 1px solid var(--border);
+  padding: 9px 12px; border-radius: 2px;
+  animation: lpIn .25s ease;
+}
+@keyframes lpIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+.lp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.lp-name { font-size: 13px; font-weight: 700; flex: 1; }
+.lp-tag { font-size: 9px; font-family: 'Share Tech Mono', monospace; color: var(--dim2); }
+.lp-host { font-size: 9px; background: var(--gold); color: #000; padding: 1px 5px; font-weight: 700; }
+.lp-ready { font-size: 9px; color: var(--green); }
+.lp-empty {
+  padding: 20px; text-align: center;
+  font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--dim);
+}
+#lp-actions { padding: 10px; border-top: 1px solid var(--border); }
+#lp-info {
+  font-family: 'Share Tech Mono', monospace; font-size: 10px;
+  color: var(--dim2); text-align: center; padding: 8px;
+}
+#btn-start-game {
+  width: 100%; padding: 11px; background: var(--green); color: #000;
+  border: none; font-family: 'Orbitron', sans-serif; font-size: 13px;
+  font-weight: 900; letter-spacing: 2px; cursor: pointer; border-radius: 2px;
+  transition: all .15s; display: none;
+}
+#btn-start-game:hover { background: #69f0ae; box-shadow: 0 0 20px rgba(0,230,118,.4); }
+#btn-leave {
+  width: 100%; padding: 8px; background: transparent; color: var(--dim2);
+  border: 1px solid var(--border); font-family: 'Exo 2', sans-serif;
+  font-size: 11px; font-weight: 600; cursor: pointer; border-radius: 2px;
+  transition: all .15s; margin-top: 6px;
+}
+#btn-leave:hover { border-color: var(--red); color: var(--red); }
+#btn-leave { display: none; }
+
+/* pulse for waiting */
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.pulsing { animation: pulse 1.5s ease infinite; }
+
+/* ── HEADER ── */
+#hdr {
+  height: 44px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border2);
+  display: flex; align-items: center; padding: 0 12px; gap: 16px;
+  flex-shrink: 0; position: relative; z-index: 10;
+}
+#hdr-logo {
+  font-family: 'Orbitron', sans-serif; font-size: 16px; font-weight: 900;
+  color: var(--gold); letter-spacing: 3px;
+  text-shadow: 0 0 20px rgba(240,192,64,.5); white-space: nowrap;
+}
+.hdr-ticker { display: flex; gap: 10px; flex: 1; overflow: hidden; }
+.tick {
+  font-family: 'Share Tech Mono', monospace; font-size: 11px; white-space: nowrap;
+  display: flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 2px;
+  background: rgba(255,255,255,.03); border: 1px solid var(--border);
+}
+.tick .up { color: var(--green); }
+.tick .dn { color: var(--red); }
+.tick .fl { color: var(--dim2); }
+#hdr-right {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--dim2);
+  white-space: nowrap;
+}
+#hdr-right span { color: var(--gold); }
+
+/* ── LAYOUT ── */
+#wrap { flex: 1; display: flex; overflow: hidden; }
+
+/* ── SIDEBARS ── */
+#sidebar-l {
+  width: 220px; flex-shrink: 0; background: var(--panel);
+  border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden;
+}
+#sidebar-r {
+  width: 230px; flex-shrink: 0; background: var(--panel);
+  border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden;
+}
+.sb-title {
+  font-family: 'Orbitron', sans-serif; font-size: 10px; letter-spacing: 3px;
+  color: var(--gold); padding: 8px 10px 6px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.sb-scroll { overflow-y: auto; flex: 1; }
+.sb-scroll::-webkit-scrollbar { width: 3px; }
+.sb-scroll::-webkit-scrollbar-thumb { background: var(--border2); }
+
+/* PLAYERS */
+#players-list { padding: 6px; display: flex; flex-direction: column; gap: 4px; }
+.pcard {
+  background: var(--panel2); border: 1px solid var(--border); border-radius: 3px;
+  padding: 7px 8px 6px; position: relative; overflow: hidden; cursor: default;
+}
+.pcard.me { border-color: var(--gold); }
+.pcard-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+.pcard-name { font-size: 12px; font-weight: 700; padding-left: 6px; }
+.pcard-money { font-family: 'Share Tech Mono', monospace; font-size: 14px; color: var(--gold); padding-left: 6px; margin-top: 2px; }
+.pcard-sub { font-size: 9px; color: var(--dim2); padding-left: 6px; font-family: 'Share Tech Mono', monospace; }
+.pcard-me-tag { position: absolute; top: 3px; right: 4px; font-size: 8px; background: var(--gold); color: #000; padding: 1px 4px; font-weight: 700; }
+.pcard-rank { position: absolute; bottom: 4px; right: 6px; font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--dim2); }
+
+/* BUILD */
+.sb-tabs { display: flex; flex-shrink: 0; border-bottom: 1px solid var(--border); }
+.sb-tab {
+  flex: 1; padding: 6px 4px; font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  cursor: pointer; text-align: center; color: var(--dim2); border-bottom: 2px solid transparent;
+  transition: all .15s; font-family: 'Orbitron', sans-serif;
+}
+.sb-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+#build-list { padding: 6px; display: flex; flex-direction: column; gap: 3px; }
+.bbtn {
+  display: flex; gap: 6px; align-items: center; background: var(--panel2);
+  border: 1px solid var(--border); border-radius: 3px; padding: 6px 8px;
+  cursor: pointer; transition: all .12s; color: var(--text); font-family: 'Exo 2', sans-serif;
+  font-size: 11px; font-weight: 600; text-align: left; width: 100%; position: relative;
+}
+.bbtn:hover { border-color: var(--gold); background: #161825; }
+.bbtn.sel { border-color: var(--gold); background: #1a1a10; box-shadow: inset 0 0 8px rgba(240,192,64,.08); }
+.bbtn.locked { opacity: .35; cursor: not-allowed; }
+.bbtn .bi { font-size: 18px; flex-shrink: 0; }
+.bbtn .bd { display: flex; flex-direction: column; flex: 1; }
+.bbtn .bn { font-size: 11px; font-weight: 700; }
+.bbtn .bc { font-family: 'Share Tech Mono', monospace; font-size: 9px; color: var(--gold); }
+.bbtn .bx { font-size: 8px; color: var(--dim2); margin-top: 1px; }
+.bbtn .blvl { position: absolute; top: 3px; right: 4px; font-size: 8px; background: var(--cyan); color: #000; padding: 1px 3px; font-weight: 700; }
+
+/* ── MAP ── */
+#map-area {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  overflow: hidden; position: relative;
+  background:
+    radial-gradient(ellipse at 30% 70%, rgba(41,121,255,.04) 0%, transparent 55%),
+    radial-gradient(ellipse at 70% 30%, rgba(255,50,80,.04) 0%, transparent 55%),
+    repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,.015) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,.015) 40px);
+}
+#map-scroll { overflow: auto; max-width: 100%; max-height: 100%; }
+#map-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+#map-scroll::-webkit-scrollbar-thumb { background: var(--border2); }
+#map-wrap { border: 1px solid var(--border2); box-shadow: 0 0 60px rgba(0,0,0,.8); background: #090b12; position: relative; display: inline-block; }
+#game-grid { display: grid; gap: 1px; background: #12141f; }
+.cell {
+  width: 48px; height: 48px; background: #0a0c14; cursor: pointer;
+  position: relative; display: flex; align-items: center; justify-content: center;
+  font-size: 20px; transition: background .1s; overflow: hidden; user-select: none;
+}
+.cell:hover { background: #14172a; }
+.cell .cicon { position: relative; z-index: 1; }
+.cell .cres { position: absolute; top: 1px; right: 2px; font-size: 9px; opacity: .5; z-index: 1; }
+.cell .cbar { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; z-index: 2; }
+.cell .csab {
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(255,50,80,.12) 4px, rgba(255,50,80,.12) 8px);
+  pointer-events: none; z-index: 3;
+}
+.cell .clvl { position: absolute; top: 1px; left: 2px; font-size: 8px; font-family: 'Share Tech Mono', monospace; font-weight: 700; z-index: 4; }
+.cell.hq-glow::after { content: ''; position: absolute; inset: -2px; z-index: 0; animation: hqPulse 2s ease-in-out infinite; }
+@keyframes hqPulse { 0%,100%{box-shadow:inset 0 0 10px currentColor;opacity:.4} 50%{box-shadow:inset 0 0 20px currentColor;opacity:.8} }
+@keyframes buildPop { 0%{transform:scale(.4);opacity:0} 65%{transform:scale(1.25)} 100%{transform:scale(1);opacity:1} }
+.pop { animation: buildPop .35s cubic-bezier(.34,1.56,.64,1); }
+
+/* CYCLE BAR */
+#cycle-wrap {
+  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+  width: 280px; z-index: 5; background: rgba(7,8,13,.85);
+  border: 1px solid var(--border2); padding: 6px 10px; border-radius: 3px;
+}
+#cycle-label { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--dim2); margin-bottom: 4px; }
+#cycle-bg { background: var(--border); height: 3px; border-radius: 2px; overflow: hidden; }
+#cycle-fill { height: 100%; background: linear-gradient(90deg, var(--cyan), var(--gold)); width: 0%; transition: width .15s linear; }
+
+/* RIGHT PANEL */
+#research-grid { padding: 8px; display: flex; flex-direction: column; gap: 5px; }
+.rcat { margin-bottom: 4px; }
+.rcat-title { font-size: 9px; color: var(--dim2); letter-spacing: 2px; font-weight: 700; margin-bottom: 4px; font-family: 'Share Tech Mono', monospace; }
+.rcard {
+  background: var(--panel2); border: 1px solid var(--border); border-radius: 3px;
+  padding: 7px 8px; cursor: pointer; transition: all .12s; position: relative; overflow: hidden;
+}
+.rcard:hover { border-color: var(--cyan); }
+.rcard.done { border-color: rgba(0,230,118,.3); background: #0d1812; }
+.rcard.active { border-color: var(--cyan); background: #0d1525; }
+.rcard.locked { opacity: .4; cursor: not-allowed; }
+.rcard-name { font-size: 11px; font-weight: 700; margin-bottom: 2px; }
+.rcard-desc { font-size: 9px; color: var(--dim2); }
+.rcard-cost { font-family: 'Share Tech Mono', monospace; font-size: 9px; color: var(--gold); }
+.rcard-time { font-family: 'Share Tech Mono', monospace; font-size: 9px; color: var(--cyan); }
+.rcard-status { position: absolute; top: 4px; right: 6px; font-size: 9px; }
+.rcard-prog { position: absolute; bottom: 0; left: 0; height: 2px; background: var(--cyan); transition: width .5s; }
+
+/* STOCKS */
+#stock-list { padding: 6px; display: flex; flex-direction: column; gap: 3px; }
+.srow {
+  background: var(--panel2); border: 1px solid var(--border); border-radius: 3px;
+  padding: 6px 8px; display: flex; align-items: center; gap: 6px;
+}
+.srow-icon { font-size: 16px; flex-shrink: 0; }
+.srow-info { flex: 1; }
+.srow-name { font-size: 11px; font-weight: 700; }
+.srow-price { font-family: 'Share Tech Mono', monospace; font-size: 13px; color: var(--gold); }
+.srow-change { font-family: 'Share Tech Mono', monospace; font-size: 9px; }
+.srow-chart { width: 50px; height: 24px; flex-shrink: 0; }
+.srow-btns { display: flex; gap: 3px; flex-shrink: 0; }
+.sbuy, .ssell {
+  font-size: 9px; font-weight: 700; padding: 3px 5px; cursor: pointer; border: none;
+  border-radius: 2px; font-family: 'Exo 2', sans-serif; transition: all .12s;
+}
+.sbuy { background: rgba(0,230,118,.15); color: var(--green); border: 1px solid rgba(0,230,118,.2); }
+.sbuy:hover { background: rgba(0,230,118,.3); }
+.ssell { background: rgba(255,50,80,.12); color: var(--red); border: 1px solid rgba(255,50,80,.2); }
+.ssell:hover { background: rgba(255,50,80,.25); }
+
+/* PORTFOLIO */
+#portfolio-list { padding: 6px; display: flex; flex-direction: column; gap: 3px; }
+.port-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 6px; background: var(--panel2); border: 1px solid var(--border); border-radius: 3px; }
+.port-val { font-family: 'Share Tech Mono', monospace; font-size: 11px; }
+
+/* STATS */
+#my-stats { padding: 8px; }
+.stat-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-bottom: 1px solid var(--border); }
+.stat-label { font-size: 11px; color: var(--dim2); }
+.stat-val { font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--text); }
+
+/* ACTIONS */
+#action-btns { padding: 8px; display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+.abtn {
+  width: 100%; padding: 8px; border: 1px solid var(--border); background: var(--panel2);
+  color: var(--text); font-family: 'Exo 2', sans-serif; font-size: 12px; font-weight: 700;
+  letter-spacing: 1px; cursor: pointer; border-radius: 3px; transition: all .12s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.abtn:hover { border-color: var(--gold); color: var(--gold); background: #181810; }
+.abtn.sell-btn:hover { border-color: var(--green); color: var(--green); background: #0d150f; }
+.abtn.dump-btn:hover { border-color: var(--red); color: var(--red); background: #140d0f; }
+
+/* LOG */
+#log-list { padding: 6px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; max-height: 250px; }
+.logrow { font-family: 'Share Tech Mono', monospace; font-size: 9px; line-height: 1.5; padding: 2px 5px; border-left: 2px solid var(--border); color: var(--dim2); }
+.logrow.sys { border-color: var(--gold); color: #998830; }
+.logrow.ev { border-color: var(--red); color: #cc6666; }
+.logrow.res { border-color: var(--green); color: #338855; }
+
+/* NOTIFS */
+#notifs { position: fixed; top: 50px; right: 240px; display: flex; flex-direction: column; gap: 5px; z-index: 150; pointer-events: none; }
+.notif {
+  background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--gold);
+  padding: 7px 12px; font-size: 11px; max-width: 260px;
+  font-family: 'Share Tech Mono', monospace;
+  animation: nfIn .25s ease, nfOut .3s ease 2.7s forwards;
+}
+.notif.danger { border-left-color: var(--red); }
+.notif.success { border-left-color: var(--green); }
+.notif.event { border-left-color: var(--purple); font-size: 12px; font-weight: 700; }
+@keyframes nfIn { from{opacity:0;transform:translateX(16px)} to{opacity:1;transform:translateX(0)} }
+@keyframes nfOut { to{opacity:0;transform:translateX(16px)} }
+
+/* TOOLTIP */
+#tt {
+  position: fixed; background: var(--panel2); border: 1px solid var(--border2);
+  padding: 8px 12px; font-size: 11px; pointer-events: none; z-index: 100;
+  max-width: 200px; display: none; border-radius: 3px; box-shadow: 0 4px 24px rgba(0,0,0,.6);
+}
+#tt.show { display: block; }
+#tt-h { font-weight: 700; font-size: 13px; color: var(--gold); margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<div id="overlay">
+  <div id="lobby-wrap">
+    <div id="modal">
+      <div class="m-logo">⚔ TYCOON KRIEG</div>
+      <div class="m-sub">// GLOBALE LOBBY — EINFACH EINSTEIGEN //</div>
+      <label class="m-label">DEIN IMPERATORNAME</label>
+      <input class="m-input" id="inp-name" type="text" placeholder="Imperator..." maxlength="14" autofocus>
+      <button class="m-btn" id="btn-join-lobby" disabled>⚔ LOBBY BETRETEN</button>
+      <div id="m-status" class="pulsing">Verbinde mit Server...</div>
+    </div>
+
+    <div id="lobby-players">
+      <div id="lp-header">
+        <div id="lp-title">SPIELER IN DER LOBBY</div>
+        <div id="lp-count">0 / ∞</div>
+      </div>
+      <div id="lobby-players-list">
+        <div class="lp-empty pulsing">Warte auf Spieler...</div>
+      </div>
+      <div id="lp-actions">
+        <div id="lp-info">Mindestens 2 Spieler zum Starten nötig.</div>
+        <button id="btn-start-game">▶ SPIEL STARTEN</button>
+        <button id="btn-leave">✕ LOBBY VERLASSEN</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="hdr">
+  <div id="hdr-logo">⚔ TYCOON KRIEG</div>
+  <div class="hdr-ticker" id="hdr-ticker"></div>
+  <div id="hdr-right">
+    SPIELER: <span id="h-name">---</span> &nbsp;
+    RANG: <span id="h-rank">#1</span>
+  </div>
+</div>
+
+<div id="wrap">
+  <div id="sidebar-l">
+    <div class="sb-title">IMPERIEN</div>
+    <div class="sb-scroll" id="players-list"></div>
+    <div class="sb-tabs">
+      <div class="sb-tab active" id="tab-build" onclick="switchBuildTab('build')">BAUEN</div>
+      <div class="sb-tab" id="tab-upgrade" onclick="switchBuildTab('upgrade')">UPGRADE</div>
+    </div>
+    <div id="build-list" class="sb-scroll"></div>
+  </div>
+
+  <div id="map-area">
+    <div id="map-scroll">
+      <div id="map-wrap">
+        <div id="game-grid"></div>
+      </div>
+    </div>
+    <div id="cycle-wrap">
+      <div id="cycle-label">EINKOMMENSRUNDE IN: --s</div>
+      <div id="cycle-bg"><div id="cycle-fill"></div></div>
+    </div>
+  </div>
+
+  <div id="sidebar-r">
+    <div class="sb-tabs">
+      <div class="sb-tab active" id="rtab-btn-stats" onclick="switchRTab('stats')">STATS</div>
+      <div class="sb-tab" id="rtab-btn-research" onclick="switchRTab('research')">FORSCHUNG</div>
+      <div class="sb-tab" id="rtab-btn-stock" onclick="switchRTab('stock')">BÖRSE</div>
+      <div class="sb-tab" id="rtab-btn-log" onclick="switchRTab('log')">LOG</div>
+    </div>
+    <div id="rtab-stats" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;">
+      <div id="my-stats"></div>
+      <div class="sb-title" style="margin-top:4px;">LAGER</div>
+      <div id="portfolio-list"></div>
+      <div id="action-btns">
+        <button class="abtn sell-btn" onclick="sellAll()">💰 ALLES VERKAUFEN</button>
+        <button class="abtn dump-btn" onclick="dumpMarket()">📉 MARKT FLUTEN</button>
+        <button class="abtn" onclick="sellStockAll()">📈 PORTFOLIO LEEREN</button>
+      </div>
+    </div>
+    <div id="rtab-research" style="display:none;flex:1;overflow-y:auto;"><div id="research-grid"></div></div>
+    <div id="rtab-stock" style="display:none;flex:1;overflow-y:auto;"><div id="stock-list"></div></div>
+    <div id="rtab-log" style="display:none;flex:1;overflow-y:auto;"><div class="sb-title">EREIGNISSE</div><div id="log-list"></div></div>
+  </div>
+</div>
+
+<div id="tt"><div id="tt-h"></div><div id="tt-b"></div></div>
+<div id="notifs"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, update, onValue }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA8uOSHXM2cyI3DlPHR4fsNIqMk9gW03uY",
+  authDomain: "livespiel-c0973.firebaseapp.com",
+  projectId: "livespiel-c0973",
+  storageBucket: "livespiel-c0973.firebasestorage.app",
+  messagingSenderId: "782116754907",
+  appId: "1:782116754907:web:21303cd9f5833917f703fe",
+  databaseURL: "https://livespiel-c0973-default-rtdb.firebaseio.com"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const ROOM_ID = 'global_lobby';
+const GRID_SIZE = 16;
+const CYCLE_MS = 15000;
+
+const COLORS = ['#2979ff','#ff3355','#00e676','#ff6d00','#ce93d8','#00e5ff'];
+
+const BUILDINGS = {
+  hq:      { icon:'🏛', name:'Zentrale',    cost:0,   desc:'Basis-Einkommen', lvlMax:3 },
+  mine:    { icon:'⛏',  name:'Bergwerk',    cost:250, desc:'Generiert Metall & Gold', lvlMax:3 },
+  factory: { icon:'🏭', name:'Fabrik',      cost:400, desc:'Verarbeitet Rohstoffe', lvlMax:2 },
+  farm:    { icon:'🌾', name:'Farm',        cost:150, desc:'Produziert Nahrung', lvlMax:3 },
+  lab:     { icon:'🔬', name:'Labor',       cost:500, desc:'Erzeugt Tech-Punkte', lvlMax:2 }
+};
+
+const RESEARCH_TREE = [
+  { id:'mining2',   name:'Bergbau II',    cost:300,  desc:'+50% Mine-Effizienz' },
+  { id:'factory2',  name:'Industrie II',   cost:450,  desc:'Fabrik-Erträge verdoppelt' },
+  { id:'market2',   name:'Freihandel',     cost:350,  desc:'Handelsboni freischalten' }
+];
+
+// Player-State
+let myPid = 0;
+let myName = '';
+let inLobby = false;
+let inGame = false;
+
+let myMoney = 1200;
+let myResources = { gold: 5, iron: 10, wheat: 20, tech: 0 };
+let stockPrices = { gold: 150, iron: 45, wheat: 15, tech: 300 };
+let stockChanges = { gold: 2.1, iron: -1.2, wheat: 0.5, tech: 5.4 };
+let activeResearch = [];
+let builtGrid = {}; // Format: "x_y": {type: 'mine', lvl: 1}
+
+let selectedBuildingKey = 'mine';
+let currentBuildTab = 'build';
+
+function fmtMoney(n) { return '💰' + Math.floor(n).toLocaleString('de-DE'); }
+
+// ── INITIALISIERUNG ──
+async function init() {
+  try {
+    const snap = await get(ref(db, `rooms/${ROOM_ID}`));
+    if (!snap.exists()) {
+      setStatus('Keine aktive Partie. Starte die Lobby!', 'ok');
+    } else {
+      const s = snap.val();
+      setStatus(s.started ? 'Spiel läuft bereits.' : `Lobby aktiv · ${Object.keys(s.lobbyPlayers||{}).length} Spieler wartend`, 'ok');
+    }
+    document.getElementById('btn-join-lobby').disabled = false;
+  } catch(e) {
+    setStatus('Verbindungsfehler zu Firebase.', 'err');
+  }
+}
+init();
+
+// Lobby Beitritt
+document.getElementById('btn-join-lobby').onclick = async () => {
+  const name = document.getElementById('inp-name').value.trim() || 'Imperator';
+  myName = name;
+  setStatus('Betrete...', '');
+
+  try {
+    const snap = await get(ref(db, `rooms/${ROOM_ID}`));
+    let state = snap.val();
+    const takenPids = state && state.lobbyPlayers ? Object.keys(state.lobbyPlayers).map(Number) : [];
+    myPid = takenPids.length > 0 ? Math.max(...takenPids) + 1 : 0;
+
+    await set(ref(db, `rooms/${ROOM_ID}/lobbyPlayers/${myPid}`), { name: myName });
+    inLobby = true;
+    document.getElementById('modal').style.display = 'none';
+    
+    document.getElementById('h-name').textContent = myName;
+    document.getElementById('h-name').style.color = COLORS[myPid % COLORS.length];
+
+    // Echtzeit-Überwachung
+    onValue(ref(db, `rooms/${ROOM_ID}/lobbyPlayers`), snap => {
+      const players = snap.val() || {};
+      const list = document.getElementById('lobby-players-list');
+      const keys = Object.keys(players);
+      document.getElementById('lp-count').textContent = `${keys.length} Spieler`;
+      list.innerHTML = '';
+      keys.forEach(id => {
+        list.innerHTML += `<div class="lp-row"><div class="lp-dot" style="background:${COLORS[id%COLORS.length]}"></div><div class="lp-name">${players[id].name}</div></div>`;
+      });
+      document.getElementById('btn-start-game').style.display = myPid === 0 && keys.length >= 1 ? 'block' : 'none';
+    });
+
+    onValue(ref(db, `rooms/${ROOM_ID}/started`), snap => {
+      if (snap.val() && inLobby) startGame();
+    });
+
+  } catch(e) {
+    setStatus('Fehler: ' + e.message, 'err');
+  }
+};
+
+document.getElementById('btn-start-game').onclick = async () => {
+  await update(ref(db, `rooms/${ROOM_ID}`), { started: true });
+};
+
+function startGame() {
+  inGame = true; inLobby = false;
+  document.getElementById('overlay').style.display = 'none';
+  showNotif("Willkommen bei Tycoon Krieg!", "success");
+  
+  generateMap();
+  renderBuildOptions();
+  renderStockMarket();
+  renderResearch();
+  updateUI();
+  startEconomyCycle();
+}
+
+// ── IN-GAME LOGIK & ENGINE ──
+
+function generateMap() {
+  const gridEl = document.getElementById('game-grid');
+  gridEl.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 48px)`;
+  gridEl.innerHTML = '';
+
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.xy = `${x}_${y}`;
+      cell.onclick = () => handleCellClick(x, y);
+      gridEl.appendChild(cell);
+    }
+  }
+}
+
+function handleCellClick(x, y) {
+  const key = `${x}_${y}`;
+  const existing = builtGrid[key];
+
+  if (currentBuildTab === 'build') {
+    if (existing) {
+      showNotif("Feld ist bereits besetzt!", "danger");
+      return;
+    }
+    const bData = BUILDINGS[selectedBuildingKey];
+    if (myMoney >= bData.cost) {
+      myMoney -= bData.cost;
+      builtGrid[key] = { type: selectedBuildingKey, lvl: 1 };
+      showNotif(`${bData.name} errichtet!`, "success");
+      logEvent(`Gebaut: ${bData.name} auf Koordinate [${x}, ${y}]`, 'sys');
+      updateCellVisual(key);
+      updateUI();
+    } else {
+      showNotif("Nicht genug Geld!", "danger");
+    }
+  } else {
+    // Upgrade-Tab aktiv
+    if (!existing) {
+      showNotif("Wähle ein bebautes Feld zum Upgraden!", "danger");
+      return;
+    }
+    const bData = BUILDINGS[existing.type];
+    if (existing.lvl >= bData.lvlMax) {
+      showNotif("Maximale Stufe erreicht!", "danger");
+      return;
+    }
+    const cost = bData.cost * (existing.lvl + 1);
+    if (myMoney >= cost) {
+      myMoney -= cost;
+      existing.lvl++;
+      showNotif(`${bData.name} auf Stufe ${existing.lvl} aufgewertet!`, "success");
+      updateCellVisual(key);
+      updateUI();
+    } else {
+      showNotif(`Upgrade kostet ${fmtMoney(cost)}!`, "danger");
+    }
+  }
+}
+
+function updateCellVisual(key) {
+  const cell = document.querySelector(`[data-xy="${key}"]`);
+  if (!cell || !builtGrid[key]) return;
+  const data = builtGrid[key];
+  const bDef = BUILDINGS[data.type];
+  cell.innerHTML = `<span class="cicon">${bDef.icon}</span><span class="clvl" style="color:var(--cyan)">v${data.lvl}</span>`;
+  cell.classList.add('pop');
+  setTimeout(() => cell.classList.remove('pop'), 400);
+}
+
+function renderBuildOptions() {
+  const list = document.getElementById('build-list');
+  list.innerHTML = '';
+  Object.keys(BUILDINGS).forEach(key => {
+    const b = BUILDINGS[key];
+    const item = document.createElement('button');
+    item.className = `bbtn ${selectedBuildingKey === key ? 'sel' : ''}`;
+    item.onclick = () => {
+      selectedBuildingKey = key;
+      renderBuildOptions();
+    };
+    item.innerHTML = `
+      <div class="bi">${b.icon}</div>
+      <div class="bd">
+        <div class="bn">${b.name}</div>
+        <div class="bc">${b.cost > 0 ? fmtMoney(b.cost) : 'Kostenlos'}</div>
+        <div class="bx">${b.desc}</div>
+      </div>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function startEconomyCycle() {
+  let start = null;
+  const fill = document.getElementById('cycle-fill');
+  const label = document.getElementById('cycle-label');
+
+  function step(timestamp) {
+    if (!start) start = timestamp;
+    let progress = timestamp - start;
+    let percent = Math.min((progress / CYCLE_MS) * 100, 100);
+    fill.style.width = percent + '%';
+    label.textContent = `EINKOMMENSRUNDE IN: ${Math.ceil((CYCLE_MS - progress)/100)}s`;
+
+    if (progress >= CYCLE_MS) {
+      executeIncome();
+      start = timestamp;
+    }
+    requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function executeIncome() {
+  // Ressourcen generieren basierend auf Gebäuden
+  let genGold = 0, genIron = 0, genWheat = 0, genTech = 0;
+  let baseCash = 50;
+
+  Object.values(builtGrid).forEach(b => {
+    let mult = b.lvl;
+    if (b.type === 'mine') { genGold += 1 * mult; genIron += 3 * mult; }
+    if (b.type === 'farm') { genWheat += 5 * mult; }
+    if (b.type === 'lab') { genTech += 2 * mult; }
+    if (b.type === 'factory') { baseCash += 30 * mult; }
+  });
+
+  if (activeResearch.includes('mining2')) { genGold = Math.floor(genGold * 1.5); genIron = Math.floor(genIron * 1.5); }
+
+  myResources.gold += genGold;
+  myResources.iron += genIron;
+  myResources.wheat += genWheat;
+  myResources.tech += genTech;
+  myMoney += baseCash;
+
+  // Marktpreise simulieren
+  Object.keys(stockPrices).forEach(res => {
+    let change = (Math.random() - 0.48) * 15;
+    stockPrices[res] = Math.max(5, Math.floor(stockPrices[res] + change));
+    stockChanges[res] = change;
+  });
+
+  logEvent(`Einkommensrunde ausgeführt (+${fmtMoney(baseCash)})`, 'res');
+  renderStockMarket();
+  updateUI();
+}
+
+function renderStockMarket() {
+  const list = document.getElementById('stock-list');
+  if(!list) return;
+  list.innerHTML = '';
+  
+  Object.keys(stockPrices).forEach(key => {
+    const pr = stockPrices[key];
+    const ch = stockChanges[key];
+    const row = document.createElement('div');
+    row.className = 'srow';
+    row.innerHTML = `
+      <div class="srow-info">
+        <div class="srow-name">${key.toUpperCase()}</div>
+        <div class="srow-price">💵${pr}</div>
+        <div class="srow-change ${ch >= 0 ? 'up':'dn'}">${ch >= 0 ? '▲':'▼'} ${ch.toFixed(1)}%</div>
+      </div>
+      <div class="srow-btns">
+        <button class="sbuy" onclick="buyResource('${key}')">KAUFEN</button>
+        <button class="ssell" onclick="sellResource('${key}')">VERKAUFEN</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+window.buyResource = function(res) {
+  let cost = stockPrices[res];
+  if (myMoney >= cost) {
+    myMoney -= cost;
+    myResources[res]++;
+    updateUI();
+  } else {
+    showNotif("Zu wenig Kapital!", "danger");
+  }
+};
+
+window.sellResource = function(res) {
+  if (myResources[res] > 0) {
+    myResources[res]--;
+    myMoney += stockPrices[res];
+    updateUI();
+  }
+};
+
+window.sellAll = function() {
+  Object.keys(myResources).forEach(res => {
+    myMoney += myResources[res] * stockPrices[res];
+    myResources[res] = 0;
+  });
+  showNotif("Gesamtes Lager liquidiert!", "success");
+  updateUI();
+};
+
+window.dumpMarket = function() {
+  Object.keys(stockPrices).forEach(res => {
+    stockPrices[res] = Math.max(2, Math.floor(stockPrices[res] * 0.6));
+  });
+  showNotif("Markt geflutet! Preise stürzen ein!", "danger");
+  logEvent("🚨 Marktmanipulation: Preise gecrasht!", "ev");
+  renderStockMarket();
+};
+
+function renderResearch() {
+  const grid = document.getElementById('research-grid');
+  grid.innerHTML = '';
+  RESEARCH_TREE.forEach(r => {
+    const done = activeResearch.includes(r.id);
+    const card = document.createElement('div');
+    card.className = `rcard ${done ? 'done':''}`;
+    card.onclick = () => {
+      if (done) return;
+      if (myMoney >= r.cost) {
+        myMoney -= r.cost;
+        activeResearch.push(r.id);
+        showNotif(`Erforscht: ${r.name}`, "success");
+        logEvent(`Technologie entwickelt: ${r.name}`, 'res');
+        renderResearch();
+        updateUI();
+      } else {
+        showNotif("Nicht genug Geld für Forschung!", "danger");
+      }
+    };
+    card.innerHTML = `
+      <div class="rcard-name">${r.name}</div>
+      <div class="rcard-desc">${r.desc}</div>
+      <div class="rcard-cost">Kosten: ${fmtMoney(r.cost)}</div>
+      <div class="rcard-status">${done ? '✅ NETZ' : '⚡ STARTEN'}</div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function updateUI() {
+  // Oben rechts Header
+  document.getElementById('h-name').textContent = myName || "Imperator";
+
+  // Sidebar Stats
+  const statBox = document.getElementById('my-stats');
+  statBox.innerHTML = `
+    <div class="stat-row"><span class="stat-label">Vermögen:</span><span class="stat-val" style="color:var(--gold);font-size:16px;">${fmtMoney(myMoney)}</span></div>
+    <div class="stat-row"><span class="stat-label">Gebäude:</span><span class="stat-val">${Object.keys(builtGrid).length}</span></div>
+  `;
+
+  // Lager / Portfolio Panel
+  const portBox = document.getElementById('portfolio-list');
+  portBox.innerHTML = '';
+  Object.keys(myResources).forEach(res => {
+    portBox.innerHTML += `
+      <div class="port-row">
+        <span class="stat-label">${res.toUpperCase()}</span>
+        <span class="port-val">${myResources[res]} Einheiten</span>
+      </div>
+    `;
+  });
+
+  // Ticker oben füllen
+  const ticker = document.getElementById('hdr-ticker');
+  ticker.innerHTML = '';
+  Object.keys(stockPrices).forEach(k => {
+    ticker.innerHTML += `<div class="tick">${k.toUpperCase()}: 💵${stockPrices[k]}</div>`;
+  });
+}
+
+function logEvent(text, type) {
+  const logList = document.getElementById('log-list');
+  const d = document.createElement('div');
+  d.className = `logrow ${type}`;
+  d.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+  logList.insertBefore(d, logList.firstChild);
+}
+
+// ── NAVIGATION CONTROLS ──
+window.switchBuildTab = function(tab) {
+  currentBuildTab = tab;
+  document.getElementById('tab-build').classList.toggle('active', tab === 'build');
+  document.getElementById('tab-upgrade').classList.toggle('active', tab === 'upgrade');
+};
+
+window.switchRTab = function(tab) {
+  document.getElementById('rtab-stats').style.display = tab === 'stats' ? 'flex' : 'none';
+  document.getElementById('rtab-research').style.display = tab === 'research' ? 'block' : 'none';
+  document.getElementById('rtab-stock').style.display = tab === 'stock' ? 'block' : 'none';
+  document.getElementById('rtab-log').style.display = tab === 'log' ? 'block' : 'none';
+
+  ['stats', 'research', 'stock', 'log'].forEach(t => {
+    document.getElementById(`rtab-btn-${t}`).classList.toggle('active', t === tab);
+  });
+};
+</script>
+</body>
+</html>
