@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TYCOON KRIEG</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&family=Share+Tech+Mono&display=swap');
+:root {
+  --bg:#07080d; --panel:#0d0f18; --panel2:#111420;
+  --border:#1e2235; --border2:#2a2d45;
+  --gold:#f0c040; --gold2:#ffd700;
+  --red:#ff3355; --green:#00e676; --cyan:#00e5ff;
+  --orange:#ff6d00; --purple:#ce93d8;
+  --text:#dde3f5; --dim:#555878; --dim2:#7b80a0;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+
+/* ── OVERLAY ── */
+#overlay{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 40%,#0d1030 0%,#07080d 70%);display:flex;align-items:center;justify-content:center;z-index:200;overflow:hidden;}
+#overlay::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,255,255,.012) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,.012) 40px);pointer-events:none;}
+#lobby-wrap{display:flex;gap:24px;align-items:flex-start;width:820px;max-width:98vw;position:relative;z-index:1;}
+#modal{background:var(--panel);border:1px solid var(--border2);box-shadow:0 0 80px rgba(240,192,64,.12);padding:32px 36px;width:340px;flex-shrink:0;position:relative;}
+#modal::before{content:'';position:absolute;top:-1px;left:40px;right:40px;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+.m-logo{font-family:'Orbitron',sans-serif;font-size:24px;font-weight:900;color:var(--gold);text-align:center;letter-spacing:4px;margin-bottom:3px;text-shadow:0 0 40px rgba(240,192,64,.5);}
+.m-sub{text-align:center;color:var(--dim2);font-size:9px;font-family:'Share Tech Mono',monospace;letter-spacing:2px;margin-bottom:20px;}
+.m-label{font-size:10px;letter-spacing:2px;color:var(--dim2);margin-bottom:5px;display:block;font-family:'Share Tech Mono',monospace;}
+.m-input{width:100%;background:var(--panel2);border:1px solid var(--border2);color:var(--text);padding:10px 12px;font-family:'Exo 2',sans-serif;font-size:14px;outline:none;margin-bottom:12px;border-radius:2px;transition:border-color .2s;}
+.m-input:focus{border-color:var(--gold);}
+.m-btn{width:100%;padding:12px;background:var(--gold);color:#000;border:none;font-family:'Orbitron',sans-serif;font-size:14px;font-weight:900;letter-spacing:2px;cursor:pointer;border-radius:2px;transition:all .15s;}
+.m-btn:hover{background:var(--gold2);box-shadow:0 0 24px rgba(240,192,64,.4);}
+.m-btn:disabled{opacity:.4;cursor:not-allowed;}
+#m-status{margin-top:12px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--dim2);text-align:center;min-height:16px;}
+#m-status.ok{color:var(--green);}
+#m-status.err{color:var(--red);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.pulsing{animation:pulse 1.5s ease infinite;}
+
+/* LOBBY PANEL */
+#lobby-players{flex:1;background:var(--panel);border:1px solid var(--border2);box-shadow:0 0 40px rgba(0,0,0,.5);}
+#lp-header{padding:12px 14px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+#lp-title{font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:3px;color:var(--gold);}
+#lp-count{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--dim2);}
+#lobby-players-list{padding:8px;display:flex;flex-direction:column;gap:4px;min-height:160px;max-height:340px;overflow-y:auto;}
+.lp-row{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--border);padding:9px 12px;border-radius:2px;animation:lpIn .25s ease;}
+@keyframes lpIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+.lp-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.lp-name{font-size:13px;font-weight:700;flex:1;}
+.lp-host{font-size:9px;background:var(--gold);color:#000;padding:1px 5px;font-weight:700;}
+.lp-tag{font-size:9px;font-family:'Share Tech Mono',monospace;color:var(--dim2);}
+.lp-empty{padding:20px;text-align:center;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--dim);}
+#lp-actions{padding:10px;border-top:1px solid var(--border);}
+#lp-info{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--dim2);text-align:center;padding:6px 0 8px;}
+#btn-start-game{width:100%;padding:11px;background:var(--green);color:#000;border:none;font-family:'Orbitron',sans-serif;font-size:13px;font-weight:900;letter-spacing:2px;cursor:pointer;border-radius:2px;transition:all .15s;display:none;}
+#btn-start-game:hover{background:#69f0ae;box-shadow:0 0 20px rgba(0,230,118,.4);}
+#btn-leave{width:100%;padding:8px;background:transparent;color:var(--dim2);border:1px solid var(--border);font-family:'Exo 2',sans-serif;font-size:11px;font-weight:600;cursor:pointer;border-radius:2px;transition:all .15s;margin-top:6px;display:none;}
+#btn-leave:hover{border-color:var(--red);color:var(--red);}
+
+/* ── HEADER ── */
+#hdr{height:44px;background:var(--panel);border-bottom:1px solid var(--border2);display:flex;align-items:center;padding:0 12px;gap:12px;flex-shrink:0;z-index:10;}
+#hdr-logo{font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;color:var(--gold);letter-spacing:3px;text-shadow:0 0 20px rgba(240,192,64,.5);white-space:nowrap;}
+.hdr-ticker{display:flex;gap:8px;flex:1;overflow:hidden;}
+.tick{font-family:'Share Tech Mono',monospace;font-size:11px;white-space:nowrap;display:flex;align-items:center;gap:3px;padding:2px 6px;border-radius:2px;background:rgba(255,255,255,.03);border:1px solid var(--border);}
+.tick .up{color:var(--green);}
+.tick .dn{color:var(--red);}
+.tick .fl{color:var(--dim2);}
+#hdr-right{display:flex;align-items:center;gap:8px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--dim2);white-space:nowrap;}
+#hdr-right span{color:var(--gold);}
+
+/* ── LAYOUT ── */
+#wrap{flex:1;display:flex;overflow:hidden;}
+
+/* ── SIDEBARS ── */
+#sidebar-l{width:210px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+#sidebar-r{width:220px;flex-shrink:0;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.sb-title{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:3px;color:var(--gold);padding:7px 10px 5px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.sb-scroll{overflow-y:auto;flex:1;}
+.sb-scroll::-webkit-scrollbar{width:3px;}
+.sb-scroll::-webkit-scrollbar-thumb{background:var(--border2);}
+
+/* PLAYER CARDS */
+#players-list{padding:5px;display:flex;flex-direction:column;gap:3px;}
+.pcard{background:var(--panel2);border:1px solid var(--border);border-radius:2px;padding:6px 8px 5px;position:relative;overflow:hidden;}
+.pcard.me{border-color:var(--gold);}
+.pcard-bar{position:absolute;left:0;top:0;bottom:0;width:3px;}
+.pcard-name{font-size:11px;font-weight:700;padding-left:6px;}
+.pcard-money{font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--gold);padding-left:6px;margin-top:1px;}
+.pcard-sub{font-size:9px;color:var(--dim2);padding-left:6px;font-family:'Share Tech Mono',monospace;}
+.pcard-me-tag{position:absolute;top:3px;right:4px;font-size:7px;background:var(--gold);color:#000;padding:1px 3px;font-weight:700;}
+.pcard-rank{position:absolute;bottom:3px;right:5px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--dim2);}
+
+/* BUILD TABS */
+.sb-tabs{display:flex;flex-shrink:0;border-bottom:1px solid var(--border);}
+.sb-tab{flex:1;padding:5px 2px;font-size:9px;font-weight:700;letter-spacing:1px;cursor:pointer;text-align:center;color:var(--dim2);border-bottom:2px solid transparent;transition:all .15s;font-family:'Orbitron',sans-serif;}
+.sb-tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+#build-list{padding:5px;display:flex;flex-direction:column;gap:3px;}
+.bbtn{display:flex;gap:6px;align-items:center;background:var(--panel2);border:1px solid var(--border);border-radius:2px;padding:6px 8px;cursor:pointer;transition:all .12s;color:var(--text);font-family:'Exo 2',sans-serif;font-size:11px;font-weight:600;text-align:left;width:100%;position:relative;}
+.bbtn:hover{border-color:var(--gold);background:#161825;}
+.bbtn.sel{border-color:var(--gold);background:#1a1a10;box-shadow:inset 0 0 8px rgba(240,192,64,.1);}
+.bbtn.locked{opacity:.35;cursor:not-allowed;}
+.bbtn .bi{font-size:16px;flex-shrink:0;}
+.bbtn .bd{display:flex;flex-direction:column;flex:1;}
+.bbtn .bn{font-size:11px;font-weight:700;}
+.bbtn .bc{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--gold);}
+.bbtn .bx{font-size:8px;color:var(--dim2);margin-top:1px;}
+.bbtn .blvl{position:absolute;top:3px;right:3px;font-size:8px;background:var(--cyan);color:#000;padding:1px 3px;font-weight:700;}
+.sel-hint{padding:8px 10px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--cyan);border-top:1px solid var(--border);flex-shrink:0;text-align:center;}
+
+/* ── MAP ── */
+#map-area{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;position:relative;background:radial-gradient(ellipse at 30% 70%,rgba(41,121,255,.04) 0%,transparent 55%),radial-gradient(ellipse at 70% 30%,rgba(255,50,80,.04) 0%,transparent 55%),repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,255,255,.015) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,.015) 40px);}
+#map-scroll{overflow:auto;max-width:100%;max-height:100%;}
+#map-scroll::-webkit-scrollbar{width:4px;height:4px;}
+#map-scroll::-webkit-scrollbar-thumb{background:var(--border2);}
+#map-wrap{border:1px solid var(--border2);box-shadow:0 0 60px rgba(0,0,0,.8);background:#090b12;position:relative;display:inline-block;}
+#game-grid{display:grid;gap:1px;background:#12141f;}
+
+/* CELLS */
+.cell{width:46px;height:46px;background:#0a0c14;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;font-size:19px;transition:background .1s;overflow:visible;user-select:none;}
+.cell:hover{background:#14172a;}
+.cell.target{background:#12192a;outline:1px solid rgba(0,229,255,.3);}
+.cell .cicon{position:relative;z-index:1;line-height:1;}
+.cell .cbar{position:absolute;bottom:0;left:0;right:0;height:3px;z-index:2;}
+.cell .clvl{position:absolute;top:1px;left:2px;font-size:8px;font-family:'Share Tech Mono',monospace;font-weight:700;z-index:4;}
+.cell .cown{position:absolute;bottom:3px;right:2px;font-size:8px;z-index:3;}
+.cell .csab{position:absolute;inset:0;background:repeating-linear-gradient(-45deg,transparent,transparent 4px,rgba(255,50,80,.15) 4px,rgba(255,50,80,.15) 8px);pointer-events:none;z-index:3;}
+.cell.hq-glow{box-shadow:inset 0 0 8px var(--glow-color,transparent);}
+
+/* PRODUCTION FLOAT */
+.pfloat{position:absolute;z-index:100;font-family:'Share Tech Mono',monospace;font-size:11px;font-weight:700;pointer-events:none;white-space:nowrap;animation:floatUp 1.4s ease-out forwards;}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0) translateX(-50%);}100%{opacity:0;transform:translateY(-38px) translateX(-50%);}}
+
+/* CYCLE BAR */
+#cycle-wrap{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:260px;z-index:5;background:rgba(7,8,13,.9);border:1px solid var(--border2);padding:5px 10px;border-radius:3px;}
+#cycle-label{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--dim2);margin-bottom:3px;}
+#cycle-bg{background:var(--border);height:3px;border-radius:2px;overflow:hidden;}
+#cycle-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--gold));width:0%;transition:width .1s linear;}
+
+/* RIGHT SIDEBAR TABS */
+.rtabs{display:flex;flex-shrink:0;border-bottom:1px solid var(--border);}
+.rtab{flex:1;padding:5px 2px;font-size:9px;font-weight:700;letter-spacing:.5px;cursor:pointer;text-align:center;color:var(--dim2);border-bottom:2px solid transparent;transition:all .15s;font-family:'Orbitron',sans-serif;}
+.rtab.active{color:var(--gold);border-bottom-color:var(--gold);}
+.rpanel{flex:1;overflow-y:auto;display:none;}
+.rpanel.active{display:block;}
+.rpanel::-webkit-scrollbar{width:3px;}
+.rpanel::-webkit-scrollbar-thumb{background:var(--border2);}
+
+/* STATS */
+#my-stats{padding:6px;}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:3px 4px;border-bottom:1px solid var(--border);}
+.stat-label{font-size:10px;color:var(--dim2);}
+.stat-val{font-family:'Share Tech Mono',monospace;font-size:11px;}
+
+/* MARKET */
+#market-list{padding:5px;display:flex;flex-direction:column;gap:3px;}
+.mrow{background:var(--panel2);border:1px solid var(--border);border-radius:2px;padding:5px 7px;display:flex;align-items:center;gap:5px;}
+.mrow-icon{font-size:15px;flex-shrink:0;}
+.mrow-info{flex:1;}
+.mrow-name{font-size:10px;font-weight:700;}
+.mrow-price{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--gold);}
+.mrow-chg{font-family:'Share Tech Mono',monospace;font-size:9px;}
+.mrow-held{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--dim2);}
+.mrow-sell{font-size:9px;font-weight:700;padding:3px 7px;cursor:pointer;border:none;border-radius:2px;font-family:'Exo 2',sans-serif;transition:all .12s;background:rgba(0,230,118,.15);color:var(--green);border:1px solid rgba(0,230,118,.2);flex-shrink:0;}
+.mrow-sell:hover{background:rgba(0,230,118,.3);}
+.mrow-sell:disabled{opacity:.35;cursor:not-allowed;}
+#sell-all-btn{width:calc(100% - 10px);margin:5px;padding:8px;background:rgba(0,230,118,.1);color:var(--green);border:1px solid rgba(0,230,118,.25);font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;border-radius:2px;transition:all .15s;}
+#sell-all-btn:hover{background:rgba(0,230,118,.25);}
+#dump-btn{width:calc(100% - 10px);margin:0 5px 5px;padding:8px;background:rgba(255,50,80,.08);color:var(--red);border:1px solid rgba(255,50,80,.2);font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;border-radius:2px;transition:all .15s;}
+#dump-btn:hover{background:rgba(255,50,80,.2);}
+
+/* LOG */
+#log-list{padding:5px;display:flex;flex-direction:column;gap:2px;}
+.logrow{font-family:'Share Tech Mono',monospace;font-size:9px;line-height:1.5;padding:2px 5px;border-left:2px solid var(--border);color:var(--dim2);}
+.logrow.sys{border-color:var(--gold);color:#998830;}
+.logrow.ev{border-color:var(--red);color:#cc6666;}
+.logrow.res{border-color:var(--green);color:#338855;}
+
+/* NOTIFS */
+#notifs{position:fixed;top:50px;right:225px;display:flex;flex-direction:column;gap:4px;z-index:150;pointer-events:none;}
+.notif{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--gold);padding:6px 10px;font-size:10px;max-width:240px;font-family:'Share Tech Mono',monospace;animation:nfIn .2s ease,nfOut .3s ease 2.7s forwards;}
+.notif.danger{border-left-color:var(--red);}
+.notif.success{border-left-color:var(--green);}
+.notif.event{border-left-color:var(--purple);font-size:11px;}
+@keyframes nfIn{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:translateX(0)}}
+@keyframes nfOut{to{opacity:0;transform:translateX(14px)}}
+
+/* TOOLTIP */
+#tt{position:fixed;background:var(--panel2);border:1px solid var(--border2);padding:7px 10px;font-size:10px;pointer-events:none;z-index:100;max-width:180px;display:none;border-radius:2px;box-shadow:0 4px 20px rgba(0,0,0,.6);}
+#tt.show{display:block;}
+#tt-h{font-weight:700;font-size:12px;color:var(--gold);margin-bottom:3px;}
+#tt-b{color:var(--dim2);white-space:pre-wrap;line-height:1.5;}
+
+/* SPARKLINE */
+.spark{display:block;}
+</style>
+</head>
+<body>
+
+<!-- LOBBY OVERLAY -->
+<div id="overlay">
+  <div id="lobby-wrap">
+    <div id="modal">
+      <div class="m-logo">⚔ TYCOON KRIEG</div>
+      <div class="m-sub">// GLOBALE LOBBY — EINFACH EINSTEIGEN //</div>
+      <label class="m-label">DEIN IMPERATORNAME</label>
+      <input class="m-input" id="inp-name" type="text" placeholder="Imperator..." maxlength="14" autofocus>
+      <button class="m-btn" id="btn-join-lobby" disabled>⚔ LOBBY BETRETEN</button>
+      <div id="m-status" class="pulsing">Verbinde mit Server...</div>
+    </div>
+    <div id="lobby-players">
+      <div id="lp-header">
+        <div id="lp-title">SPIELER IN DER LOBBY</div>
+        <div id="lp-count">0 Spieler</div>
+      </div>
+      <div id="lobby-players-list"><div class="lp-empty pulsing">Warte auf Spieler...</div></div>
+      <div id="lp-actions">
+        <div id="lp-info">Mindestens 2 Spieler zum Starten nötig.</div>
+        <button id="btn-start-game">▶ SPIEL STARTEN</button>
+        <button id="btn-leave">✕ LOBBY VERLASSEN</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div id="hdr">
+  <div id="hdr-logo">⚔ TYCOON KRIEG</div>
+  <div class="hdr-ticker" id="hdr-ticker"></div>
+  <div id="hdr-right">SPIELER: <span id="h-name">---</span> &nbsp; RANG: <span id="h-rank">#-</span> &nbsp; 💰<span id="h-money">0</span></div>
+</div>
+
+<!-- GAME -->
+<div id="wrap">
+  <!-- LEFT -->
+  <div id="sidebar-l">
+    <div class="sb-title">IMPERIEN</div>
+    <div class="sb-scroll" id="players-list"></div>
+    <div class="sb-tabs">
+      <div class="sb-tab active" data-tab="build" onclick="switchBuildTab('build')">BAUEN</div>
+      <div class="sb-tab" data-tab="upgrade" onclick="switchBuildTab('upgrade')">UPGRADE</div>
+    </div>
+    <div id="build-list" class="sb-scroll"></div>
+    <div class="sel-hint" id="sel-hint" style="display:none">▲ Gebäude auswählen dann auf Karte klicken</div>
+    <div class="sel-hint" id="sel-active" style="display:none;color:var(--gold);">📍 Klicke auf eine Zelle zum Platzieren</div>
+  </div>
+
+  <!-- MAP -->
+  <div id="map-area">
+    <div id="map-scroll">
+      <div id="map-wrap"><div id="game-grid"></div></div>
+    </div>
+    <div id="cycle-wrap">
+      <div id="cycle-label">PRODUKTION IN: --s</div>
+      <div id="cycle-bg"><div id="cycle-fill"></div></div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div id="sidebar-r">
+    <div class="rtabs">
+      <div class="rtab active" onclick="switchRTab('stats',this)">STATS</div>
+      <div class="rtab" onclick="switchRTab('market',this)">MARKT</div>
+      <div class="rtab" onclick="switchRTab('log',this)">LOG</div>
+    </div>
+    <div id="rpanel-stats" class="rpanel active">
+      <div id="my-stats"></div>
+    </div>
+    <div id="rpanel-market" class="rpanel">
+      <div id="market-list"></div>
+      <button id="sell-all-btn" onclick="sellAll()">💰 ALLES VERKAUFEN</button>
+      <button id="dump-btn" onclick="dumpMarket()">📉 MARKT FLUTEN</button>
+    </div>
+    <div id="rpanel-log" class="rpanel">
+      <div id="log-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="tt"><div id="tt-h"></div><div id="tt-b"></div></div>
+<div id="notifs"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, update, onValue, push, remove }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA8uOSHXM2cyI3DlPHR4fsNIqMk9gW03uY",
+  authDomain: "livespiel-c0973.firebaseapp.com",
+  projectId: "livespiel-c0973",
+  storageBucket: "livespiel-c0973.firebasestorage.app",
+  messagingSenderId: "782116754907",
+  appId: "1:782116754907:web:21303cd9f5833917f703fe",
+  databaseURL: "https://livespiel-c0973-default-rtdb.europe-west1.firebasedatabase.app"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ────────────────────────────────────────────────────────
+//  CONSTANTS
+// ────────────────────────────────────────────────────────
+const ROOM = 'global_lobby';
+const GRID = 14;
+const PROD_MS = 5000;  // production every 5s
+
+const COLORS = ['#2979ff','#ff3355','#00e676','#ff6d00','#ce93d8','#00e5ff','#ffea00','#ff4081','#69f0ae','#f06292','#80cbc4','#ffcc02'];
+
+const RES = {
+  gold:  { icon:'🥇', name:'Gold',   base:100, vol:.15 },
+  oil:   { icon:'🛢', name:'Öl',     base:80,  vol:.18 },
+  iron:  { icon:'⚙',  name:'Eisen',  base:60,  vol:.12 },
+  wheat: { icon:'🌾', name:'Weizen', base:40,  vol:.10 },
+  tech:  { icon:'💎', name:'Tech',   base:120, vol:.22 },
+};
+const RES_KEYS = ['gold','oil','iron','wheat','tech'];
+
+// Buildings: each has production per cycle
+const BLDGS = {
+  hq:      { icon:'🏛', name:'Zentrale',   cost:0,   lvlMax:3,
+              prod:(lvl)=>({ money: 30*lvl }), desc:'Basis-Einkommen: +30💰/Runde je Level' },
+  mine:    { icon:'⛏',  name:'Bergwerk',   cost:250, lvlMax:3,
+              prod:(lvl,res)=>({ [res||'iron']: 2*lvl, money: 5*lvl }), desc:'Abbau +2 Res/Runde' },
+  farm:    { icon:'🌾', name:'Farm',       cost:200, lvlMax:2,
+              prod:(lvl)=>({ wheat: 3*lvl, money: 5*lvl }), desc:'Produziert Weizen' },
+  lab:     { icon:'🔬', name:'Labor',      cost:400, lvlMax:2,
+              prod:(lvl)=>({ tech: 2*lvl, money: 8*lvl }), desc:'Produziert Tech' },
+  oilrig:  { icon:'🛢', name:'Ölpumpe',    cost:350, lvlMax:2,
+              prod:(lvl)=>({ oil: 2*lvl, money: 7*lvl }), desc:'Produziert Öl' },
+  refinery:{ icon:'🏭', name:'Raffinerie', cost:500, lvlMax:2,
+              prod:(lvl,res)=>({ [res||'iron']: 4*lvl, money: 10*lvl }), desc:'Hohe Res-Produktion' },
+  market:  { icon:'🏦', name:'Markt',      cost:350, lvlMax:1,
+              prod:(lvl)=>({ money: 15 }), desc:'+25% Verkaufsbonus für alle Res' },
+  tower:   { icon:'📡', name:'Sendemast',  cost:300, lvlMax:1,
+              prod:(lvl)=>({ money: 20 }), desc:'Sieht Gebäude im Umkreis' },
+  bunker:  { icon:'🛡', name:'Bunker',     cost:300, lvlMax:1,
+              prod:(lvl)=>({ money: 5 }), desc:'Schützt Nachbarzellen vor Sabotage' },
+  power:   { icon:'🔥', name:'Kohlekraft', cost:150, lvlMax:1,
+              prod:(lvl)=>({ money: 5 }), desc:'⚠ Sabotiert alle Nachbarn!' },
+};
+
+const MARKET_EVENTS = [
+  { name:'🥇 GOLDRAUSCH!',    res:'gold',  factor:1.7, msg:'Goldpreise explodieren!' },
+  { name:'🛢 ÖLKRISE!',        res:'oil',   factor:1.9, msg:'Ölknappheit!' },
+  { name:'📉 REZESSION!',      res:null,    factor:.6,  msg:'Alle Preise fallen!' },
+  { name:'💎 TECH-BOOM!',      res:'tech',  factor:2.2, msg:'KI treibt Tech-Preise!' },
+  { name:'⚙ EISENFLUT!',       res:'iron',  factor:.45, msg:'Eisen-Überangebot!' },
+  { name:'🌾 DÜRRE!',          res:'wheat', factor:2.0, msg:'Weizenknappheit!' },
+  { name:'💥 BÖRSENBOOM!',     res:null,    factor:1.4, msg:'Allgemeines Markthoch!' },
+];
+
+// ────────────────────────────────────────────────────────
+//  STATE
+// ────────────────────────────────────────────────────────
+let myPid=null, myName='';
+let gs=null;          // gameState snapshot
+let selectedBld=null; // currently selected building type
+let buildTab='build';
+let inLobby=false, inGame=false;
+let cycleTimer=null;
+let cellEls=null;     // cache of DOM cells
+let lastEventCheck=0;
+
+const getColor = pid => COLORS[pid%COLORS.length];
+const fmtM = n => Math.floor(n||0).toLocaleString('de-DE');
+
+function showNotif(msg,type='') {
+  const c=document.getElementById('notifs');
+  const d=document.createElement('div');
+  d.className=`notif ${type}`;d.textContent=msg;c.appendChild(d);
+  setTimeout(()=>d.remove(),3200);
+}
+window.showNotif=showNotif;
+
+function setStatus(msg,cls='') {
+  const el=document.getElementById('m-status');
+  el.textContent=msg;el.className=cls+(cls===''?' pulsing':'');
+}
+
+// ────────────────────────────────────────────────────────
+//  INIT
+// ────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const snap=await get(ref(db,`rooms/${ROOM}`));
+    if (!snap.exists()) {
+      setStatus('Keine Lobby aktiv — du wirst Host!','ok');
+    } else {
+      const s=snap.val();
+      if (s.started) {
+        setStatus('Spiel läuft — tritt dem laufenden Spiel bei!','ok');
+      } else {
+        const cnt=Object.keys(s.lobbyPlayers||{}).length;
+        setStatus(`Lobby aktiv · ${cnt} Spieler warten`,'ok');
+      }
+    }
+    document.getElementById('btn-join-lobby').disabled=false;
+  } catch(e) {
+    setStatus('Firebase-Fehler: '+e.message,'err');
+  }
+}
+init();
+
+// ────────────────────────────────────────────────────────
+//  LOBBY
+// ────────────────────────────────────────────────────────
+document.getElementById('btn-join-lobby').onclick=async()=>{
+  const name=document.getElementById('inp-name').value.trim()||'Imperator';
+  myName=name;
+  setStatus('Verbinde...','');
+  try {
+    const snap=await get(ref(db,`rooms/${ROOM}`));
+    let state=snap.val();
+
+    if (state && state.started) {
+      // Join mid-game
+      const takenPids=Object.keys(state.players||{}).map(Number);
+      myPid=0; while(takenPids.includes(myPid)) myPid++;
+      await update(ref(db,`rooms/${ROOM}/players/${myPid}`),makePlayer(myPid,name));
+      inGame=true;
+      enterGame();
+      listenRoom();
+      return;
+    }
+
+    // Lobby join
+    const takenPids=state&&state.lobbyPlayers?Object.keys(state.lobbyPlayers).map(Number):[];
+    myPid=takenPids.length?Math.max(...takenPids)+1:0;
+
+    if (!state) {
+      // First player — init room
+      await set(ref(db,`rooms/${ROOM}`),buildInitialState());
+    }
+    await set(ref(db,`rooms/${ROOM}/lobbyPlayers/${myPid}`),{name,pid:myPid});
+
+    inLobby=true;
+    document.getElementById('modal').style.display='none';
+    document.getElementById('btn-leave').style.display='block';
+    document.getElementById('h-name').textContent=name;
+    document.getElementById('h-name').style.color=getColor(myPid);
+
+    listenLobby();
+    showNotif('Lobby betreten!','success');
+  } catch(e) {
+    setStatus('Fehler: '+e.message,'err');
+  }
+};
+
+document.getElementById('btn-leave').onclick=async()=>{
+  await remove(ref(db,`rooms/${ROOM}/lobbyPlayers/${myPid}`));
+  location.reload();
+};
+
+document.getElementById('btn-start-game').onclick=async()=>{
+  if (myPid!==0) return;
+  // Convert lobbyPlayers → players
+  const snap=await get(ref(db,`rooms/${ROOM}/lobbyPlayers`));
+  const lps=snap.val()||{};
+  const upd={};
+  Object.values(lps).forEach(lp=>{
+    upd[`rooms/${ROOM}/players/${lp.pid}`]=makePlayer(lp.pid,lp.name);
+  });
+  upd[`rooms/${ROOM}/started`]=true;
+  upd[`rooms/${ROOM}/lastProd`]=Date.now();
+  upd[`rooms/${ROOM}/nextEvent`]=Date.now()+45000+Math.random()*45000;
+  await update(ref(db),upd);
+};
+
+function listenLobby() {
+  onValue(ref(db,`rooms/${ROOM}/lobbyPlayers`),snap=>{
+    renderLobbyPlayers(snap.val()||{});
+  });
+  onValue(ref(db,`rooms/${ROOM}/started`),snap=>{
+    if (snap.val()&&inLobby) {
+      inLobby=false; inGame=true;
+      enterGame();
+      listenRoom();
+    }
+  });
+}
+
+function renderLobbyPlayers(players) {
+  const list=document.getElementById('lobby-players-list');
+  const keys=Object.keys(players);
+  document.getElementById('lp-count').textContent=`${keys.length} Spieler`;
+  if (!keys.length) { list.innerHTML='<div class="lp-empty pulsing">Warte auf Spieler...</div>'; return; }
+  list.innerHTML='';
+  keys.forEach(pid=>{
+    const p=players[pid];
+    const isMe=Number(pid)===myPid, isHost=Number(pid)===0;
+    const col=getColor(Number(pid));
+    const d=document.createElement('div');d.className='lp-row';
+    d.innerHTML=`<div class="lp-dot" style="background:${col}"></div><div class="lp-name" style="color:${col}">${p.name}</div>${isHost?'<div class="lp-host">HOST</div>':''}${isMe?'<div class="lp-tag">← ICH</div>':''}`;
+    list.appendChild(d);
+  });
+  const canStart=keys.length>=2&&myPid===0;
+  document.getElementById('btn-start-game').style.display=canStart?'block':'none';
+  document.getElementById('lp-info').textContent=keys.length<2?`Noch ${2-keys.length} Spieler nötig.`:myPid===0?'Du bist Host — starte das Spiel!':'Warte auf Host…';
+}
+
+// ────────────────────────────────────────────────────────
+//  GAME INIT
+// ────────────────────────────────────────────────────────
+function enterGame() {
+  document.getElementById('overlay').style.display='none';
+  buildGrid();
+  startCycleUI();
+}
+
+function buildInitialState() {
+  const cells={};
+  const resMap=placeResources();
+  for (let i=0;i<GRID*GRID;i++) {
+    const r=Math.floor(i/GRID),c=i%GRID;
+    cells[i]={id:i,row:r,col:c,building:null,owner:null,resource:resMap[i]||null,level:1,sabotaged:false};
+  }
+  return {
+    started:false,cells,players:{},lobbyPlayers:{},
+    prices:{gold:100,oil:80,iron:60,wheat:40,tech:120},
+    priceHist:{gold:[100],oil:[80],iron:[60],wheat:[40],tech:[120]},
+    lastProd:Date.now(),nextEvent:Date.now()+60000,log:{}
+  };
+}
+
+function placeResources() {
+  const pos={};
+  const counts={gold:10,oil:8,iron:12,wheat:12,tech:6};
+  RES_KEYS.forEach(r=>{let n=0;while(n<counts[r]){const i=Math.floor(Math.random()*GRID*GRID);if(!pos[i]){pos[i]=r;n++;}}});
+  return pos;
+}
+
+function makePlayer(pid,name) {
+  return {pid,name,money:800,income:0,res:{gold:0,oil:0,iron:0,wheat:0,tech:0},hasMarket:false};
+}
+
+// ────────────────────────────────────────────────────────
+//  LISTEN ROOM
+// ────────────────────────────────────────────────────────
+function listenRoom() {
+  onValue(ref(db,`rooms/${ROOM}`),snap=>{
+    if (!snap.exists()) return;
+    gs=snap.val();
+    if (!gs.started) return;
+    placeMyHQ(gs);
+    renderAll(gs);
+    if (myPid===0) { maybeProduce(gs); maybeEvent(gs); }
+  });
+}
+
+// ────────────────────────────────────────────────────────
+//  AUTO HQ PLACEMENT
+// ────────────────────────────────────────────────────────
+async function placeMyHQ(state) {
+  if (!state.players?.[myPid]) return;
+  const cells=state.cells||{};
+  if (Object.values(cells).some(c=>c.owner===myPid&&c.building==='hq')) return;
+
+  const hqPositions=Object.values(cells).filter(c=>c.building==='hq').map(c=>({r:c.row,c:c.col}));
+  const free=Object.values(cells).filter(c=>!c.building&&c.owner===null);
+  if (!free.length) return;
+
+  const scored=free.map(c=>{
+    const minDist=hqPositions.length?Math.min(...hqPositions.map(h=>Math.abs(c.row-h.r)+Math.abs(c.col-h.c))):GRID*2;
+    return {id:c.id,score:minDist+Math.random()*4};
+  }).sort((a,b)=>b.score-a.score);
+
+  const upd={};
+  upd[`rooms/${ROOM}/cells/${scored[0].id}/building`]='hq';
+  upd[`rooms/${ROOM}/cells/${scored[0].id}/owner`]=myPid;
+  upd[`rooms/${ROOM}/cells/${scored[0].id}/level`]=1;
+  const lk=push(ref(db,`rooms/${ROOM}/log`)).key;
+  upd[`rooms/${ROOM}/log/${lk}`]={msg:`🏛 ${myName} betritt das Schlachtfeld!`,pid:myPid};
+  await update(ref(db),upd);
+}
+
+// ────────────────────────────────────────────────────────
+//  PRODUCTION CYCLE
+// ────────────────────────────────────────────────────────
+async function maybeProduce(state) {
+  if ((Date.now()-(state.lastProd||0))<PROD_MS) return;
+  const cells=state.cells||{}, players=state.players||{};
+  const upd={};
+
+  Object.values(players).forEach(p=>{
+    const pid=p.pid;
+    let moneyGain=0;
+    const resGain={gold:0,oil:0,iron:0,wheat:0,tech:0};
+    const hasMarket=p.hasMarket;
+
+    Object.values(cells).forEach(cell=>{
+      if (cell.owner!==pid||!cell.building) return;
+      const b=BLDGS[cell.building]; if(!b) return;
+      const sab=cell.sabotaged&&!hasBunkerNear(cell,cells);
+      if (sab) return;
+      const prod=b.prod(cell.level||1, cell.resource);
+      if (prod.money) moneyGain+=prod.money;
+      RES_KEYS.forEach(r=>{ if(prod[r]) resGain[r]+=prod[r]; });
+    });
+
+    const newRes={};
+    RES_KEYS.forEach(r=>{ newRes[r]=(p.res?.[r]||0)+resGain[r]; });
+
+    upd[`rooms/${ROOM}/players/${pid}/money`]=(p.money||0)+moneyGain;
+    upd[`rooms/${ROOM}/players/${pid}/income`]=moneyGain;
+    upd[`rooms/${ROOM}/players/${pid}/res`]=newRes;
+  });
+
+  // Price drift
+  const prices=state.prices||{}, newPrices={}, newHist={};
+  RES_KEYS.forEach(r=>{
+    const cur=prices[r]||RES[r].base, base=RES[r].base;
+    const noise=(Math.random()-.44)*cur*RES[r].vol;
+    newPrices[r]=Math.max(8,Math.round(cur+(base-cur)*.07+noise));
+    const hist=[...(state.priceHist?.[r]||[cur]),newPrices[r]];
+    newHist[r]=hist.slice(-20);
+  });
+  upd[`rooms/${ROOM}/prices`]=newPrices;
+  upd[`rooms/${ROOM}/priceHist`]=newHist;
+  upd[`rooms/${ROOM}/lastProd`]=Date.now();
+  await update(ref(db),upd);
+}
+
+async function maybeEvent(state) {
+  if (Date.now()<(state.nextEvent||Infinity)) return;
+  const ev=MARKET_EVENTS[Math.floor(Math.random()*MARKET_EVENTS.length)];
+  const prices=state.prices||{};
+  const upd={};
+  if (ev.res) upd[`rooms/${ROOM}/prices/${ev.res}`]=Math.round((prices[ev.res]||RES[ev.res].base)*ev.factor);
+  else RES_KEYS.forEach(r=>upd[`rooms/${ROOM}/prices/${r}`]=Math.round((prices[r]||RES[r].base)*ev.factor));
+  upd[`rooms/${ROOM}/nextEvent`]=Date.now()+40000+Math.random()*50000;
+  const lk=push(ref(db,`rooms/${ROOM}/log`)).key;
+  upd[`rooms/${ROOM}/log/${lk}`]={msg:`🚨 ${ev.name} — ${ev.msg}`,pid:null,type:'event'};
+  await update(ref(db),upd);
+  showNotif(`🚨 ${ev.name}`,'event');
+}
+
+function hasBunkerNear(cell, cells) {
+  return getNeighbors(cell.row,cell.col).some(([r,c])=>{
+    const n=cells[r*GRID+c];
+    return n?.building==='bunker'&&n.owner===cell.owner;
+  });
+}
+
+function getNeighbors(r,c) {
+  const n=[];
+  if(r>0)n.push([r-1,c]);if(r<GRID-1)n.push([r+1,c]);
+  if(c>0)n.push([r,c-1]);if(c<GRID-1)n.push([r,c+1]);
+  return n;
+}
+
+// ────────────────────────────────────────────────────────
+//  RENDER
+// ────────────────────────────────────────────────────────
+function renderAll(state) {
+  renderHeader(state);
+  renderCells(state);
+  renderPlayers(state);
+  renderBuildMenu(state);
+  renderStats(state);
+  renderMarket(state);
+  renderLog(state);
+}
+
+function renderHeader(state) {
+  const me=state.players?.[myPid];
+  const prices=state.prices||{};
+  document.getElementById('h-name').textContent=myName;
+  document.getElementById('h-name').style.color=getColor(myPid);
+  const money=me?.money||0;
+  document.getElementById('h-money').textContent=fmtM(money);
+
+  const sorted=Object.values(state.players||{}).sort((a,b)=>netWorth(b,state)-netWorth(a,state));
+  const rank=sorted.findIndex(p=>p.pid===myPid)+1;
+  document.getElementById('h-rank').textContent='#'+(rank||'-');
+
+  const ticker=document.getElementById('hdr-ticker');
+  ticker.innerHTML='';
+  RES_KEYS.forEach(r=>{
+    const cur=prices[r]||RES[r].base;
+    const hist=(state.priceHist||{})[r]||[cur];
+    const prev=hist[hist.length-2]||cur;
+    const diff=cur-prev;
+    const cls=diff>0?'up':diff<0?'dn':'fl';
+    const sym=diff>0?'▲':diff<0?'▼':'—';
+    ticker.innerHTML+=`<div class="tick">${RES[r].icon} ${r.toUpperCase()} <span class="${cls}">${sym}${cur}</span></div>`;
+  });
+}
+
+function netWorth(p,state) {
+  if(!p) return 0;
+  let w=p.money||0;
+  const pr=state.prices||{};
+  RES_KEYS.forEach(r=>w+=(p.res?.[r]||0)*(pr[r]||RES[r].base));
+  return w;
+}
+
+// ── GRID ──────────────────────────────────────────────────
+function buildGrid() {
+  const grid=document.getElementById('game-grid');
+  grid.style.gridTemplateColumns=`repeat(${GRID},46px)`;
+  grid.innerHTML='';
+  cellEls=[];
+  for (let i=0;i<GRID*GRID;i++) {
+    const el=document.createElement('div');
+    el.className='cell';
+    el.dataset.idx=i;
+    el.onclick=()=>onCellClick(i);
+    el.onmousemove=e=>ttShow(e,i);
+    el.onmouseleave=ttHide;
+    grid.appendChild(el);
+    cellEls.push(el);
+  }
+}
+
+let prevCells=null;
+function renderCells(state) {
+  if (!cellEls) return;
+  const cells=state.cells||{};
+  for (let i=0;i<GRID*GRID;i++) {
+    const c=cells[i]; if(!c) continue;
+    // Only re-render if changed
+    const sig=`${c.building}|${c.owner}|${c.level}|${c.sabotaged}`;
+    if (cellEls[i].dataset.sig===sig) continue;
+    cellEls[i].dataset.sig=sig;
+    updateCellEl(cellEls[i],c,state);
+  }
+}
+
+function updateCellEl(el,c,state) {
+  const b=c.building?BLDGS[c.building]:null;
+  const resInfo=c.resource?RES[c.resource]:null;
+  const color=c.owner!==null?getColor(c.owner):null;
+  const mainIcon=b?b.icon:(resInfo?`<span style="opacity:.18;font-size:17px">${resInfo.icon}</span>`:'');
+  const lvlStr=(b&&c.level>1)?`<div class="clvl" style="color:${color||'#fff'}">${'★'.repeat(c.level-1)}</div>`:'';
+  const sabStr=(c.sabotaged&&!hasBunkerNear(c,state.cells||{}))?'<div class="csab"></div>':'';
+  el.innerHTML=`<span class="cicon">${mainIcon}</span>${resInfo&&b?`<div class="cown">${resInfo.icon}</div>`:''}${lvlStr}${sabStr}<div class="cbar" style="background:${color||'transparent'}"></div>`;
+  el.className='cell'+(c.building==='hq'&&color?' hq-glow':'');
+  if (c.building==='hq'&&color) el.style.setProperty('--glow-color',color+'66');
+  else el.style.removeProperty('--glow-color');
+}
+
+// Float animation on a cell
+function floatProd(cellIdx, text, color) {
+  if (!cellEls?.[cellIdx]) return;
+  const rect=cellEls[cellIdx].getBoundingClientRect();
+  const mapArea=document.getElementById('map-area');
+  const mapRect=mapArea.getBoundingClientRect();
+  const d=document.createElement('div');
+  d.className='pfloat';
+  d.textContent=text;
+  d.style.cssText=`color:${color};left:${rect.left-mapRect.left+23}px;top:${rect.top-mapRect.top+10}px;`;
+  mapArea.appendChild(d);
+  setTimeout(()=>d.remove(),1500);
+}
+
+// ── PLAYERS ───────────────────────────────────────────────
+function renderPlayers(state) {
+  const list=document.getElementById('players-list');
+  list.innerHTML='';
+  Object.values(state.players||{}).sort((a,b)=>netWorth(b,state)-netWorth(a,state)).forEach((p,rank)=>{
+    const col=getColor(p.pid);
+    const nw=netWorth(p,state);
+    const d=document.createElement('div');
+    d.className=`pcard${p.pid===myPid?' me':''}`;
+    d.innerHTML=`<div class="pcard-bar" style="background:${col}"></div>${p.pid===myPid?'<div class="pcard-me-tag">ICH</div>':''}<div class="pcard-rank">#${rank+1}</div><div class="pcard-name" style="color:${col}">${p.name}</div><div class="pcard-money">💰${fmtM(p.money)}</div><div class="pcard-sub">Wert: 💰${fmtM(nw)} | +${p.income||0}/Rd</div>`;
+    list.appendChild(d);
+  });
+}
+
+// ── BUILD MENU ────────────────────────────────────────────
+window.switchBuildTab=function(tab) {
+  buildTab=tab;
+  document.querySelectorAll('[data-tab]').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  if (gs) renderBuildMenu(gs);
+};
+
+function renderBuildMenu(state) {
+  const me=state.players?.[myPid];
+  const list=document.getElementById('build-list');
+  list.innerHTML='';
+
+  if (buildTab==='build') {
+    document.getElementById('sel-hint').style.display='block';
+    document.getElementById('sel-active').style.display=selectedBld?'block':'none';
+    Object.entries(BLDGS).filter(([k])=>k!=='hq').forEach(([key,b])=>{
+      const ok=(me?.money||0)>=b.cost;
+      const btn=document.createElement('button');
+      btn.className=`bbtn${selectedBld===key?' sel':''}${!ok?' locked':''}`;
+      btn.innerHTML=`<span class="bi">${b.icon}</span><div class="bd"><div class="bn">${b.name}</div><div class="bc">💰${b.cost}</div><div class="bx">${b.desc}</div></div>`;
+      btn.onclick=()=>{ if(ok){selectedBld=(selectedBld===key)?null:key; renderBuildMenu(state);} };
+      list.appendChild(btn);
+    });
+  } else {
+    document.getElementById('sel-hint').style.display='none';
+    document.getElementById('sel-active').style.display='none';
+    const cells=state.cells||{};
+    let any=false;
+    Object.values(cells).filter(c=>c.owner===myPid&&c.building&&c.building!=='hq').forEach(cell=>{
+      const b=BLDGS[cell.building];
+      if (!b||cell.level>=b.lvlMax) return;
+      const cost=b.cost*(cell.level+1);
+      const ok=(me?.money||0)>=cost;
+      any=true;
+      const btn=document.createElement('button');
+      btn.className=`bbtn${!ok?' locked':''}`;
+      btn.innerHTML=`<span class="bi">${b.icon}</span><div class="bd"><div class="bn">${b.name} → Lv${cell.level+1}</div><div class="bc">💰${cost}</div><div class="bx">Zelle ${cell.id}</div></div><span class="blvl">LV${cell.level}</span>`;
+      btn.onclick=()=>{ if(ok) upgradeCell(cell.id,cell.building,cost,cell.level); };
+      list.appendChild(btn);
+    });
+    if (!any) list.innerHTML='<div style="padding:10px;color:var(--dim2);font-size:10px;">Keine upgradefähigen Gebäude.</div>';
+  }
+}
+
+// ── CELL CLICK ────────────────────────────────────────────
+async function onCellClick(idx) {
+  if (!gs||!selectedBld) return;
+  const cell=gs.cells[idx];
+  const me=gs.players?.[myPid];
+  if (!me) return;
+  if (cell.building) return showNotif('Bereits bebaut!','danger');
+  if (cell.owner!==null&&cell.owner!==myPid&&selectedBld!=='power') return showNotif('Feindliches Territorium!','danger');
+  const b=BLDGS[selectedBld];
+  if ((me.money||0)<b.cost) return showNotif('Nicht genug Kapital!','danger');
+
+  // Power plant must be adjacent to enemy
+  if (selectedBld==='power') {
+    const ns=getNeighbors(cell.row,cell.col);
+    if (!ns.some(([r,c])=>{const n=gs.cells[r*GRID+c];return n?.owner!==null&&n.owner!==myPid;}))
+      return showNotif('Kohlekraft muss neben Feind-Gebäude!','danger');
+  }
+
+  const upd={};
+  upd[`rooms/${ROOM}/cells/${idx}/building`]=selectedBld;
+  upd[`rooms/${ROOM}/cells/${idx}/owner`]=myPid;
+  upd[`rooms/${ROOM}/cells/${idx}/level`]=1;
+  upd[`rooms/${ROOM}/players/${myPid}/money`]=(me.money||0)-b.cost;
+  if (selectedBld==='market') upd[`rooms/${ROOM}/players/${myPid}/hasMarket`]=true;
+
+  // Coal power sabotage
+  if (selectedBld==='power') {
+    getNeighbors(cell.row,cell.col).forEach(([r,c])=>{
+      const n=gs.cells[r*GRID+c];
+      if (n?.owner!==null&&n.owner!==myPid&&!hasBunkerNear(n,gs.cells))
+        upd[`rooms/${ROOM}/cells/${r*GRID+c}/sabotaged`]=true;
+    });
+  }
+
+  const lk=push(ref(db,`rooms/${ROOM}/log`)).key;
+  upd[`rooms/${ROOM}/log/${lk}`]={msg:`${me.name} baut ${b.icon}${b.name}`,pid:myPid};
+  await update(ref(db),upd);
+  showNotif(`${b.icon} ${b.name} gebaut!`,'success');
+  selectedBld=null;
+  if (gs) renderBuildMenu(gs);
+}
+
+async function upgradeCell(idx,btype,cost,curLvl) {
+  const me=gs.players?.[myPid];
+  const upd={};
+  upd[`rooms/${ROOM}/cells/${idx}/level`]=curLvl+1;
+  upd[`rooms/${ROOM}/players/${myPid}/money`]=(me.money||0)-cost;
+  const lk=push(ref(db,`rooms/${ROOM}/log`)).key;
+  upd[`rooms/${ROOM}/log/${lk}`]={msg:`${me.name} upgradet ${BLDGS[btype].icon}${BLDGS[btype].name} → Lv${curLvl+1}`,pid:myPid};
+  await update(ref(db),upd);
+  showNotif(`⬆ ${BLDGS[btype].name} Lv${curLvl+1}!`,'success');
+}
+
+// ── STATS ─────────────────────────────────────────────────
+function renderStats(state) {
+  const me=state.players?.[myPid]; if(!me) return;
+  const pr=state.prices||{};
+  let html=`<div class="sb-title">MEIN IMPERIUM</div><div style="padding:6px;">`;
+  html+=`<div class="stat-row"><span class="stat-label">💰 Kapital</span><span class="stat-val" style="color:var(--gold)">${fmtM(me.money)}</span></div>`;
+  html+=`<div class="stat-row"><span class="stat-label">📈 Eink./Runde</span><span class="stat-val" style="color:var(--green)">+${me.income||0}</span></div>`;
+  html+=`<div class="stat-row"><span class="stat-label">🏆 Gesamtwert</span><span class="stat-val">${fmtM(netWorth(me,state))}</span></div>`;
+  html+=`<div style="height:6px;"></div>`;
+  RES_KEYS.forEach(r=>{
+    const amt=me.res?.[r]||0;
+    const val=Math.floor(amt*(pr[r]||RES[r].base));
+    html+=`<div class="stat-row"><span class="stat-label">${RES[r].icon} ${RES[r].name}</span><span class="stat-val">${amt} <span style="color:var(--dim2);font-size:9px;">≈💰${val}</span></span></div>`;
+  });
+  html+=`</div>`;
+  document.getElementById('my-stats').innerHTML=html;
+}
+
+// ── MARKET ────────────────────────────────────────────────
+function renderMarket(state) {
+  const me=state.players?.[myPid];
+  const prices=state.prices||{};
+  const ph=state.priceHist||{};
+  const list=document.getElementById('market-list');
+  list.innerHTML='';
+  RES_KEYS.forEach(r=>{
+    const cur=prices[r]||RES[r].base;
+    const hist=ph[r]||[cur];
+    const prev=hist[hist.length-2]||cur;
+    const diff=cur-prev;
+    const pct=prev?((diff/prev)*100).toFixed(1):'0.0';
+    const cls=diff>0?'up':diff<0?'dn':'fl';
+    const amt=me?.res?.[r]||0;
+    const row=document.createElement('div');row.className='mrow';
+    row.innerHTML=`<div class="mrow-icon">${RES[r].icon}</div><div class="mrow-info"><div class="mrow-name">${RES[r].name}</div><div class="mrow-price">${cur}</div><div class="mrow-chg ${cls}">${diff>=0?'+':''}${pct}%</div></div><canvas class="spark" width="46" height="22" id="spark-${r}"></canvas><div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;"><div class="mrow-held">${amt} Stk</div><button class="mrow-sell" ${!amt?'disabled':''} onclick="sellRes('${r}')">VK ALLE</button></div>`;
+    list.appendChild(row);
+    setTimeout(()=>drawSpark(document.getElementById(`spark-${r}`),hist,diff>=0?'#00e676':'#ff3355'),0);
+  });
+}
+
+function drawSpark(canvas,data,color) {
+  if (!canvas) return;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,46,22);
+  if (data.length<2) return;
+  const min=Math.min(...data),max=Math.max(...data),range=max-min||1;
+  ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=1.5;
+  data.forEach((v,i)=>{const x=(i/(data.length-1))*44+1,y=20-((v-min)/range)*18;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.stroke();
+}
+
+window.sellRes=async function(r) {
+  const me=gs.players?.[myPid],amt=me?.res?.[r]||0;
+  if (!amt) return showNotif('Nichts zu verkaufen!','danger');
+  const price=gs.prices?.[r]||RES[r].base;
+  const bonus=me?.hasMarket?1.25:1;
+  const earned=Math.floor(amt*price*bonus);
+  const upd={};
+  upd[`rooms/${ROOM}/players/${myPid}/money`]=(me.money||0)+earned;
+  upd[`rooms/${ROOM}/players/${myPid}/res/${r}`]=0;
+  const lk=push(ref(db,`rooms/${ROOM}/log`)).key;
+  upd[`rooms/${ROOM}/log/${lk}`]={msg:`${me.name} verkauft ${amt}x ${RES[r].icon} für 💰${earned}`,pid:myPid,type:'res'};
+  await update(ref(db),upd);
+  showNotif(`💰 +${earned} für ${RES[r].icon}`,'success');
+};
+
+window.sellAll=async function() {
+  const me=gs.players?.[myPid]; if (!me) return;
+  const pr=gs.prices||{};
+  const bonus=me.hasMarket?1.25:1;
+  let total=0;
+  const upd={};
+  RES_KEYS.forEach(r=>{ const amt=me.res?.[r]||0; if(amt){total+=Math.floor(amt*(pr[r]||RES[r].base)*bonus);upd[`rooms/${ROOM}/players/${myPid}/res/${r}`]=0;} });
+  if (!total) return showNotif('Lager leer!','danger');
+  upd[`rooms/${ROOM}/players/${myPid}/money`]=(me.money||0)+total;
+  const lk=push(ref(db,`rooms/${ROOM}/log`)).key;
+  upd[`rooms/${ROOM}/log/${lk}`]={msg:`${me.name} liquidiert Lager für 💰${total}`,pid:myPid,type:'res'};
+  await update(ref(db),upd);
+  showNotif(`💰 +${total} aus Lager!`,'success');
+};
+
+window.dumpMarket=async function() {
+  const me=gs.players?.[myPid],pr=gs.prices||{};
+  let maxR=null,maxA=0;
+  RES_KEYS.forEach(r=>{ if((me?.res?.[r]||0)>maxA){maxA=me.res[r];maxR=r;} });
+  if (!maxR||maxA<5) return showNotif('Mind. 5 Einheiten einer Ressource nötig!','danger');
+  const crash=Math.max(6,Math.floor((pr[maxR]||RES[maxR].base)*.5));
+  const earned=Math.floor(maxA*crash);
+  const upd={};
+  upd[`rooms/${ROOM}/prices/${maxR}`]=crash;
+  upd[`rooms/${ROOM}/players/${myPid}/money`]=(me.money||0)+earned;
+  upd[`rooms/${ROOM}/players/${myPid}/res/${maxR}`]=0;
+  const lk=push(ref(db,`rooms/${ROOM}/log`)).key;
+  upd[`rooms/${ROOM}/log/${lk}`]={msg:`📉 ${me.name} flutet ${RES[maxR].icon}-Markt! Preis: ${crash}`,pid:myPid,type:'event'};
+  await update(ref(db),upd);
+  showNotif(`📉 ${RES[maxR].icon} Markt gecrasht → ${crash}`,'danger');
+};
+
+// ── LOG ───────────────────────────────────────────────────
+function renderLog(state) {
+  const list=document.getElementById('log-list');
+  const entries=state.log?Object.values(state.log).slice(-50).reverse():[];
+  list.innerHTML=entries.map(e=>`<div class="logrow${e.type==='event'?' ev':e.type==='res'?' res':e.pid!=null?' sys':''}">${e.msg}</div>`).join('');
+}
+
+// ── TAB SWITCH ────────────────────────────────────────────
+window.switchRTab=function(tab,el) {
+  document.querySelectorAll('.rtab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.rpanel').forEach(p=>p.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.getElementById(`rpanel-${tab}`)?.classList.add('active');
+};
+
+// ── CYCLE UI (local timer, production is server-driven) ───
+function startCycleUI() {
+  if (cycleTimer) clearInterval(cycleTimer);
+  cycleTimer=setInterval(()=>{
+    if (!gs) return;
+    const elapsed=Date.now()-(gs.lastProd||Date.now());
+    const pct=Math.min(100,(elapsed/PROD_MS)*100);
+    const rem=Math.max(0,Math.ceil((PROD_MS-elapsed)/1000));
+    document.getElementById('cycle-fill').style.width=pct+'%';
+    document.getElementById('cycle-label').textContent=`PRODUKTION IN: ${rem}s`;
+
+    // Show float animations as production happens
+    if (pct>=100&&gs.cells&&gs.players?.[myPid]) {
+      triggerFloats();
+    }
+  },200);
+}
+
+let lastFloatTime=0;
+function triggerFloats() {
+  const now=Date.now();
+  if (now-lastFloatTime<PROD_MS-200) return;
+  lastFloatTime=now;
+  if (!gs?.cells||!gs?.players?.[myPid]) return;
+  const cells=gs.cells, pr=gs.prices||{};
+  Object.values(cells).forEach(cell=>{
+    if (cell.owner!==myPid||!cell.building) return;
+    const b=BLDGS[cell.building]; if(!b) return;
+    const sab=cell.sabotaged&&!hasBunkerNear(cell,cells);
+    if (sab) { floatProd(cell.id,'⚠ SAB','#ff3355'); return; }
+    const prod=b.prod(cell.level||1,cell.resource);
+    const parts=[];
+    if (prod.money) parts.push(`+${prod.money}💰`);
+    RES_KEYS.forEach(r=>{ if(prod[r]) parts.push(`+${prod[r]}${RES[r].icon}`); });
+    if (parts.length) floatProd(cell.id,parts.join(' '),'#00e676');
+  });
+}
+
+// ── TOOLTIP ───────────────────────────────────────────────
+function ttShow(e,idx) {
+  if (!gs) return;
+  const cell=gs.cells?.[idx]; if(!cell) return;
+  const b=cell.building?BLDGS[cell.building]:null;
+  const owner=cell.owner!==null?(gs.players?.[cell.owner]?.name||`P${cell.owner}`):null;
+  const res=cell.resource?RES[cell.resource]:null;
+  const tt=document.getElementById('tt');
+  document.getElementById('tt-h').textContent=b?`${b.icon} ${b.name}${cell.level>1?` Lv${cell.level}`:''}`:res?`${res.icon} ${res.name} Vorkommen`:'Leeres Land';
+  const lines=[owner?`Besitzer: ${owner}`:'Unbesetzt'];
+  if (b) {
+    const prod=b.prod(cell.level||1,cell.resource);
+    const prodStr=Object.entries(prod).map(([k,v])=>k==='money'?`+${v}💰/Rd`:`+${v}${RES[k]?.icon||k}/Rd`).join('  ');
+    lines.push(prodStr||b.desc);
+    lines.push(b.desc);
+  }
+  if (res&&!b) lines.push(`Ressource vorhanden: bau eine Mine!`);
+  if (cell.sabotaged&&!hasBunkerNear(cell,gs.cells||{})) lines.push('⚠ SABOTIERT — kein Output!');
+  document.getElementById('tt-b').textContent=lines.filter(Boolean).join('\n');
+  tt.style.left=(e.clientX+14)+'px';
+  tt.style.top=(e.clientY+12)+'px';
+  tt.className='tt show';
+}
+function ttHide(){document.getElementById('tt').className='tt';}
+
+// ── BACKGROUND TICK ──────────────────────────────────────
+setInterval(()=>{
+  if (!gs||!inGame) return;
+  if (myPid===0) { maybeProduce(gs); maybeEvent(gs); }
+},1000);
+
+</script>
+</body>
+</html>
